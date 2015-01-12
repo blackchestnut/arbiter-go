@@ -4,10 +4,22 @@ import (
 	"fmt"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/render"
+	"time"
 )
+
+var ch = make(chan string)
+
+func saver(c chan string) {
+	for {
+		time.Sleep(1 * time.Second)
+		utm := <-c
+		fmt.Println(utm)
+	}
+}
 
 // go run server.go
 func main() {
+	go saver(ch)
 	m := martini.Classic()
 
 	// Setup routes
@@ -30,5 +42,6 @@ func GetTest(params martini.Params) string {
 }
 
 func GetArbiter(r render.Render, params martini.Params) {
+	ch <- params["utm"]
 	r.Redirect("http://"+params["url"], 302)
 }
