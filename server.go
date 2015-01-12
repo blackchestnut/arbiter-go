@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/render"
+	"github.com/nu7hatch/gouuid"
 	"time"
 )
 
@@ -42,6 +43,10 @@ func GetTest(params martini.Params) string {
 }
 
 func GetArbiter(r render.Render, params martini.Params) {
-	ch <- params["utm"]
-	r.Redirect("http://"+params["url"], 302)
+	id, err := uuid.NewV4()
+	if (err == nil) {
+		ch <- params["utm"]
+		redirect_url := fmt.Sprintf("http://%v/?id=%v", params["url"], id)
+		r.Redirect(redirect_url, 302)
+	}
 }
