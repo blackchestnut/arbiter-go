@@ -4,18 +4,28 @@ import (
 	"fmt"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/render"
-	"github.com/nu7hatch/gouuid"
 	"time"
 )
 
-var ch = make(chan string)
+type Data struct {
+	id  int64
+	utm string
+}
 
-func saver(c chan string) {
+var ch = make(chan *Data)
+
+func saver(c chan *Data) {
 	for {
 		time.Sleep(1 * time.Second)
-		utm := <-c
-		fmt.Println(utm)
+		data := <-c
+		fmt.Printf("%#v\n", data)
 	}
+}
+
+func FullRedirectUrl(utm string, url string) string {
+	id := time.Now().UnixNano()
+	ch <- &Data{id, utm}
+	return fmt.Sprintf("http://%v/?id=%v", url, id)
 }
 
 // go run server.go
@@ -27,7 +37,8 @@ func main() {
 	r := martini.NewRouter()
 	r.Get("/", GetLanding)
 	r.Get("/test/:foo", GetTest)
-	r.Get("/arbiter/:utm/redirect/:url", GetArbiter)
+	r.Get("/arbiter/:utm/redirect/:url", GetRedirect)
+	r.Get("/arbiter/:utm/html/:url", GetHtml)
 	m.Action(r.Handle)
 
 	m.Use(render.Renderer())
@@ -42,11 +53,10 @@ func GetTest(params martini.Params) string {
 	return fmt.Sprintf("Test route params: %v, params['foo']: %v", params, params["foo"])
 }
 
-func GetArbiter(r render.Render, params martini.Params) {
-	id, err := uuid.NewV4()
-	if (err == nil) {
-		ch <- params["utm"]
-		redirect_url := fmt.Sprintf("http://%v/?id=%v", params["url"], id)
-		r.Redirect(redirect_url, 302)
-	}
+func GetRedirect(r render.Render, params martini.Params) {
+	r.Redirect(FullRedirectUrl(params["utm"], params["url"]), 302)
+}
+
+func GetHtml(r render.Render, params martini.Params) {
+	r.HTML(200, "html", FullRedirectUrl(params["utm"], params["url"]))
 }
