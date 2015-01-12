@@ -1,7 +1,7 @@
 # arbiter-go
 Run server:
 ```console
-$ go run server.go
+go run server.go
 ```
 
 Localhost redirect test:
