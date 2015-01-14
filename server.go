@@ -9,23 +9,29 @@ import (
 
 type Data struct {
 	id  int64
+	url string
 	utm string
+}
+
+func (d *Data) String() string {
+	return fmt.Sprintf("%#v", d)
+}
+
+func (d *Data) RedirectUrl() string {
+	return fmt.Sprintf("http://%v/?id=%v", d.url, d.id)
 }
 
 var ch = make(chan *Data)
 
 func saver(c chan *Data) {
 	for {
-		time.Sleep(1 * time.Second)
 		data := <-c
-		fmt.Printf("%#v\n", data)
+		fmt.Println(data)
 	}
 }
 
-func FullRedirectUrl(utm string, url string) string {
-	id := time.Now().UnixNano()
-	ch <- &Data{id, utm}
-	return fmt.Sprintf("http://%v/?id=%v", url, id)
+func GenerateID() int64 {
+	return time.Now().UnixNano()
 }
 
 // go run server.go
@@ -54,9 +60,13 @@ func GetTest(params martini.Params) string {
 }
 
 func GetRedirect(r render.Render, params martini.Params) {
-	r.Redirect(FullRedirectUrl(params["utm"], params["url"]), 302)
+	data := Data{GenerateID(), params["url"], params["utm"]}
+	ch <- &data
+	r.Redirect(data.RedirectUrl(), 302)
 }
 
 func GetHtml(r render.Render, params martini.Params) {
-	r.HTML(200, "html", FullRedirectUrl(params["utm"], params["url"]))
+	data := Data{GenerateID(), params["url"], params["utm"]}
+	ch <- &data
+	r.HTML(200, "html", data.RedirectUrl())
 }
